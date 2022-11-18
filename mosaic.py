@@ -1,5 +1,6 @@
 import cv2
 import colorsys
+import numpy
 from enum import Enum
 
 class MosaicImage:
@@ -19,11 +20,12 @@ class MosaicImage:
         #resize the original to fit our new constraints
         self.resized_img = cv2.resize(self.ref_img, (self.resize_width, self.resize_height), interpolation=cv2.INTER_LINEAR)
 
-        self.chunks = []
         self.chunkify()
 
         if enable_debug:
             self.resized_img = self.debug_draw()
+
+        self.set_sub_images()
 
     #returns a sub-image of the resized image
     def get_image_slice(self, r, c):
@@ -36,13 +38,14 @@ class MosaicImage:
 
     #split the image into chunks and whatnot
     def chunkify(self):
+        self.chunks = {}
         for r in range(self.mosaic_height):
             for c in range(self.mosaic_width):
                 try:
                     sub_img = self.get_image_slice(c, r)
                     color_RGB = averageColor(sub_img)
                     color_HSV = colorsys.rgb_to_hsv(color_RGB[0], color_RGB[1], color_RGB[2])
-                    self.chunks.append(Chunk((c, r), color_HSV))
+                    self.chunks[(c,r)] = Chunk((c,r), self.unit_size, color_HSV)
                 except:
                     print("Image size is 0!", r, c)
 
@@ -52,18 +55,48 @@ class MosaicImage:
     def debug_draw(self):
         for i in range(self.resize_height):
             draw_row(self.resized_img, self.unit_size, i, self.resize_height)
-
         for i in range(self.resize_width):
             draw_col(self.resized_img, self.unit_size, i, self.resize_width)
-
+        if self.chunks:
+            for r in range(self.mosaic_height):
+                for c in range(self.mosaic_width):
+                    org = (c * self.unit_size, r * self.unit_size + self.unit_size//2)
+                    cv2.putText(img=self.resized_img, text=str(round(self.chunks[(c,r)].color[0],2)), org=org, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.7, color=(0, 0, 0),thickness=2)
         return self.resized_img
 
+    def set_sub_images(self):
+        print("Setting sub images...")
+        for r in range(self.mosaic_height):
+            for c in range(self.mosaic_width):
+                img = cv2.imread("apple.png", cv2.IMREAD_COLOR)
+                chunk = self.chunks[(c,r)]
+                chunk.set_img(img)
+                print("\tSet image for",c,r)
+
+    def generate_collage(self):
+        columns = []
+        print("Building columns...")
+        for r in range(self.mosaic_height):
+            col = []
+            for c in range(self.mosaic_width):
+                col.append(self.chunks[(c,r)].img)
+                print("\tAdded chunk",c,r)
+            columns.append(numpy.vstack(col))
+            print("Built row",r)
+        rows = numpy.hstack(columns)
+        return rows
+        
 class Chunk:
-    def __init__(self, position, hsv):
+    def __init__(self, position, size, hsv):
         self.position = position
+        self.size = size
         self.y = position[0]
         self.x = position[1]
         self.color = hsv
+
+    def set_img(self, img):
+        self.img = cv2.resize(img, (self.size, self.size), interpolation=cv2.INTER_LINEAR)
+
 
 class GeneralColor(Enum):
     RED = 1
