@@ -1,8 +1,9 @@
 import cv2
 import colorsys
+from enum import Enum
 
 class MosaicImage:
-    def __init__(self, ref_img, unit_size):
+    def __init__(self, ref_img, unit_size, enable_debug = False):
         self.unit_size = unit_size #how wide/tall each chunk that we are sampling is (for example, 60 px)
 
         self.ref_img = ref_img #the original image
@@ -10,16 +11,19 @@ class MosaicImage:
         self.ref_width = ref_img.shape[1] #the width of the original image
 
         self.resize_height = self.ref_height - self.ref_height%unit_size #height of the resized image (divisible by unit size)
-        self.resie_width = self.ref_width - self.ref_width%unit_size #width of the resized image (divisible by unit size)
+        self.resize_width = self.ref_width - self.ref_width%unit_size #width of the resized image (divisible by unit size)
 
         self.mosaic_height = self.resize_height // self.unit_size #how many chunks tall is our mosaic?
-        self.mosaic_width = self.resie_width // self.unit_size #how many chunks wide is our mosaic?
+        self.mosaic_width = self.resize_width // self.unit_size #how many chunks wide is our mosaic?
 
         #resize the original to fit our new constraints
-        self.resized_img = cv2.resize(self.ref_img, (self.resie_width, self.resize_height), interpolation=cv2.INTER_LINEAR)
+        self.resized_img = cv2.resize(self.ref_img, (self.resize_width, self.resize_height), interpolation=cv2.INTER_LINEAR)
 
         self.chunks = []
         self.chunkify()
+
+        if enable_debug:
+            self.resized_img = self.debug_draw()
 
     #returns a sub-image of the resized image
     def get_image_slice(self, r, c):
@@ -42,12 +46,46 @@ class MosaicImage:
                 except:
                     print("Image size is 0!", r, c)
 
+    def __str__(self):
+        return "Mosaic Width: " + str(self.mosaic_width) + "\nMosaic Height: " + str(self.mosaic_height)
+
+    def debug_draw(self):
+        for i in range(self.resize_height):
+            draw_row(self.resized_img, self.unit_size, i, self.resize_height)
+
+        for i in range(self.resize_width):
+            draw_col(self.resized_img, self.unit_size, i, self.resize_width)
+
+        return self.resized_img
+
 class Chunk:
-    def __init__(self, position, color):
+    def __init__(self, position, hsv):
         self.position = position
         self.y = position[0]
         self.x = position[1]
+        self.color = hsv
+
+class GeneralColor(Enum):
+    RED = 1
+    ORANGE = 2
+    YELLOW = 3
+    GREEN = 4
+    CYAN = 5
+    BLUE = 6
+    PURPLE = 7
+    PINK = 8
+
+class ColorRange:
+    def __init__(self, start, end, color):
+        self.start = start
+        self.end = end
         self.color = color
+
+    def belongs(self, hue):
+        if hue > self.start and hue < self.end:
+            return self.color
+        else:
+            return False
 
 def show_image(img):
     cv2.imshow("Test", img)
@@ -61,15 +99,6 @@ def draw_row(img, unitSize, row, height):
 def draw_col(img, unitSize, col, width):
     x = unitSize * col
     cv2.line(img, (0, x), (width, x), (255,255,255))
-
-def debug_draw(img, unit_size):
-    for i in range(img.shape[1]):
-        draw_row(img, unit_size, i, img.shape[1])
-
-    for i in range(img.shape[0]):
-        draw_col(img, unit_size, i, img.shape[0])
-    
-    return img
 
 def averageColor(img):
     h = img.shape[0]
