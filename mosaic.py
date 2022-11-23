@@ -3,6 +3,7 @@ import colorsys
 import numpy
 from enum import Enum
 
+
 class MosaicImage:
     def __init__(self, ref_img, unit_size, enable_debug = False):
         self.unit_size = unit_size #how wide/tall each chunk that we are sampling is (for example, 60 px)
@@ -65,13 +66,25 @@ class MosaicImage:
         return self.resized_img
 
     def set_sub_images(self):
+        count = 1
+        
         print("Setting sub images...")
         for r in range(self.mosaic_height):
             for c in range(self.mosaic_width):
-                img = cv2.imread("apple.png", cv2.IMREAD_COLOR)
+                
+                # cause some images break the mosaic
+                if count >= 15:
+                    count = 1
+                
+                # hard coded ruh roh
+                img_name = "dataset/red fruit/Image_" + str(count) + ".jpg"
+                
+                img = cv2.imread(img_name, cv2.IMREAD_COLOR)
                 chunk = self.chunks[(c,r)]
                 chunk.set_img(img)
                 print("\tSet image for",c,r)
+                
+                count += 1
 
     def generate_collage(self):
         columns = []
