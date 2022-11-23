@@ -2,6 +2,7 @@ import cv2
 import colorsys
 import numpy
 from enum import Enum
+import os
 
 
 class MosaicImage:
@@ -25,8 +26,6 @@ class MosaicImage:
 
         if enable_debug:
             self.resized_img = self.debug_draw()
-
-        self.set_sub_images()
 
     #returns a sub-image of the resized image
     def get_image_slice(self, r, c):
@@ -54,41 +53,46 @@ class MosaicImage:
         return "Mosaic Width: " + str(self.mosaic_width) + "\nMosaic Height: " + str(self.mosaic_height)
 
     def debug_draw(self):
+        #draw a line for each row
         for i in range(self.resize_height):
             draw_row(self.resized_img, self.unit_size, i, self.resize_height)
+        #draw a line for each column
         for i in range(self.resize_width):
             draw_col(self.resized_img, self.unit_size, i, self.resize_width)
+        #for every chunk
         if self.chunks:
             for r in range(self.mosaic_height):
                 for c in range(self.mosaic_width):
+                    #center of chunk
                     org = (c * self.unit_size, r * self.unit_size + self.unit_size//2)
-                    cv2.putText(img=self.resized_img, text=str(round(self.chunks[(c,r)].color[0],2)), org=org, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.7, color=(0, 0, 0),thickness=2)
+                    #place text with its color index in that chunk
+                    cv2.putText(img=self.resized_img, text=str(self.chunks[(c,r)].color.value), org=org, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.7, color=(0, 0, 0),thickness=2)
         return self.resized_img
 
     def set_sub_images(self):
-        count = 1
+        baseAdd = "./dataset/red fruit/" #base address of data
+        dir_list = os.listdir(baseAdd) #grab a list of all files in that directory
+        print(dir_list) #probably remove this
+        dir_index = 0
         
         print("Setting sub images...")
         for r in range(self.mosaic_height):
             for c in range(self.mosaic_width):
-                
-                # cause some images break the mosaic
-                if count >= 15:
-                    count = 1
-                
-                # hard coded ruh roh
-                img_name = "dataset/red fruit/Image_" + str(count) + ".jpg"
-                
-                img = cv2.imread(img_name, cv2.IMREAD_COLOR)
-                chunk = self.chunks[(c,r)]
-                chunk.set_img(img)
+                img = cv2.imread(baseAdd + dir_list[dir_index], cv2.IMREAD_COLOR) #load the image
+                self.set_sub_img((c,r), img)
                 print("\tSet image for",c,r)
                 
-                count += 1
+                dir_index+=1 #if you don't have enough images (shouldn't happen)
+                if dir_index >= len(dir_list):
+                    dir_index = 0
+
+    def set_sub_img(self, coor, img):
+        self.chunks[coor].set_img(img)
 
     def generate_collage(self):
         columns = []
         print("Building columns...")
+        #create an array of all columns
         for r in range(self.mosaic_height):
             col = []
             for c in range(self.mosaic_width):
@@ -96,6 +100,7 @@ class MosaicImage:
                 print("\tAdded chunk",c,r)
             columns.append(numpy.vstack(col))
             print("Built row",r)
+        #compress all columns into a row
         rows = numpy.hstack(columns)
         return rows
         
@@ -105,7 +110,11 @@ class Chunk:
         self.size = size
         self.y = position[0]
         self.x = position[1]
-        self.color = hsv
+        self.hsv = hsv
+
+        #what color is this chunk supposed to be?
+        self.color = eval_color(hsv[0])
+        print(self.color)
 
     def set_img(self, img):
         self.img = cv2.resize(img, (self.size, self.size), interpolation=cv2.INTER_LINEAR)
@@ -120,18 +129,42 @@ class GeneralColor(Enum):
     BLUE = 6
     PURPLE = 7
     PINK = 8
+    BROWN = 9
+    BLACK = 10
+    GRAY = 11
+    WHITE = 12
 
 class ColorRange:
-    def __init__(self, start, end, color):
+    def __init__(self, color, start, end):
         self.start = start
         self.end = end
         self.color = color
 
     def belongs(self, hue):
-        if hue > self.start and hue < self.end:
-            return self.color
+        if hue >= self.start and hue < self.end:
+            return True
         else:
             return False
+
+    def __str__(self):
+        return self.color
+
+COLOR_RANGES = [
+    ColorRange(GeneralColor.CYAN, 0, 0.24),
+    ColorRange(GeneralColor.GREEN, 0.24, 0.45),
+    ColorRange(GeneralColor.YELLOW, 0.45, 0.52),
+    ColorRange(GeneralColor.ORANGE, 0.52, 0.62),
+    ColorRange(GeneralColor.RED, 0.62, 0.71),
+    ColorRange(GeneralColor.PINK, 0.71, 0.81),
+    ColorRange(GeneralColor.PURPLE, 0.81, 0.91),
+    ColorRange(GeneralColor.BLUE, 0.91, 1.0),
+]
+
+def eval_color(hue):
+    for range in COLOR_RANGES:
+        if range.belongs(hue):
+            return range.color
+    print(hue,"didn't fit!")
 
 def show_image(img):
     cv2.imshow("Test", img)
