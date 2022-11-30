@@ -70,7 +70,7 @@ class MosaicImage:
         return self.resized_img
 
     def set_sub_images(self):
-        baseAdd = "./dataset/red fruit/" #base address of data
+        baseAdd = "./dataset/candy AND green/" #base address of data
         dir_list = os.listdir(baseAdd) #grab a list of all files in that directory
         print(dir_list) #probably remove this
         dir_index = 0
