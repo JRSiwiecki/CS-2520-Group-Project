@@ -69,7 +69,7 @@ class MosaicImage:
                     #center of chunk
                     org = (c * self.unit_size, r * self.unit_size + self.unit_size//2)
                     #place text with its color index in that chunk
-                    cv2.putText(img=self.resized_img, text=str(self.chunks[(c,r)].color[0].value), org=org, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.7, color=(255, 255, 255),thickness=2)
+                    cv2.putText(img=self.resized_img, text=str(self.chunks[(c,r)].color[1].value), org=org, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.7, color=(255, 255, 255),thickness=2)
         return self.resized_img
 
     def set_sub_images(self):
@@ -102,19 +102,19 @@ class MosaicImage:
         self.chunks[coor].set_img(img)
 
     def generate_collage(self):
-        columns = []
+        rows = []
         print("Building columns...")
         #create an array of all columns
-        for r in range(self.mosaic_height):
-            col = []
-            for c in range(self.mosaic_width):
-                col.append(self.chunks[(c,r)].img)
+        for c in range(self.mosaic_width):
+            row = []
+            for r in range(self.mosaic_height):
+                row.append(self.chunks[(c,r)].img)
                 print("\tAdded chunk",c,r)
-            columns.append(numpy.vstack(col))
+            rows.append(numpy.vstack(row))
             print("Built row",r)
         #compress all columns into a row
-        rows = numpy.hstack(columns)
-        return rows
+        columns = numpy.hstack(rows)
+        return columns
         
 class Chunk:
     def __init__(self, position, size, hsv):
@@ -197,9 +197,9 @@ class ValueRange:
 
 COLOR_RANGES = [
     ColorRange(GeneralHue.CYAN, 0, 0.24),
-    ColorRange(GeneralHue.GREEN, 0.24, 0.45),
-    ColorRange(GeneralHue.YELLOW, 0.45, 0.52),
-    ColorRange(GeneralHue.ORANGE, 0.52, 0.62),
+    ColorRange(GeneralHue.GREEN, 0.24, 0.52),
+    ColorRange(GeneralHue.YELLOW, 0.52, 0.55),
+    ColorRange(GeneralHue.ORANGE, 0.55, 0.62),
     ColorRange(GeneralHue.RED, 0.62, 0.71),
     ColorRange(GeneralHue.PINK, 0.71, 0.81),
     ColorRange(GeneralHue.PURPLE, 0.81, 0.91),
@@ -207,9 +207,9 @@ COLOR_RANGES = [
 ]
 
 VALUE_RANGES = [
-    ValueRange(GeneralValue.BLACK, 0, 50),
-    ValueRange(GeneralValue.GRAY, 50, 240),
-    ValueRange(GeneralValue.WHITE, 240, 256),
+    ValueRange(GeneralValue.BLACK, 0, 150),
+    ValueRange(GeneralValue.GRAY, 150, 200),
+    ValueRange(GeneralValue.WHITE, 200, 256),
 ]
 
 def eval_color(color):

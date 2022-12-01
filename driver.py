@@ -20,7 +20,7 @@ except:
     print("Can't find that file")
     exit()    
 
-mosaic = MosaicImage(ref_img=img, unit_size=5, enable_debug=True)
+mosaic = MosaicImage(ref_img=img, unit_size=10, enable_debug=True)
 print(mosaic)
 show_image(mosaic.resized_img)
 show_image(mosaic.generate_collage())
