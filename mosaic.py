@@ -43,14 +43,11 @@ class MosaicImage:
         self.chunks = {}
         for r in range(self.mosaic_height):
             for c in range(self.mosaic_width):
-                try:
                     sub_img = self.get_image_slice(c, r) #get the image at this location
                     color_RGB = averageColor(sub_img) #loop through all pixels and get average RGB
                     color_HSV = colorsys.rgb_to_hsv(color_RGB[0], color_RGB[1], color_RGB[2]) #turn the RGB into HSV
                     self.chunks[(c,r)] = Chunk((c,r), self.unit_size, color_HSV) #create a new chunk and pass in HSV
                     print("created",c,r) #debug
-                except:
-                    print("Image size is 0!", r, c)
 
     def __str__(self):
         return "Mosaic Width: " + str(self.mosaic_width) + "\nMosaic Height: " + str(self.mosaic_height)
@@ -73,17 +70,21 @@ class MosaicImage:
         return self.resized_img
 
     def set_sub_images(self):
-        baseAdd = "./dataset/" #base address of data
+        baseAdd = "./testdata/" #base address of data
 
         print("Setting sub images...")
         for r in range(self.mosaic_height):
             for c in range(self.mosaic_width):
                 chunk = self.chunks[(c,r)] #get chunk at this location
 
-                #get the filepath to reference from
-                #chunk.color[0] = color (e.g RED, ORANGE, YELLOW)
-                #chunk.color[1] = value (e.g BLACK, GRAY, WHITE)
-                chunk_color_string = getValueString[chunk.color[1]] + " " + getColorString[chunk.color[0]]
+                try:
+                    #get the filepath to reference from
+                    #chunk.color[0] = color (e.g RED, ORANGE, YELLOW)
+                    #chunk.color[1] = value (e.g BLACK, GRAY, WHITE)
+                    chunk_color_string = getValueString[chunk.color[1]] + "" + getColorString[chunk.color[0]]
+                except:
+                    print(chunk.color)
+                    chunk_color_string = getValueString[chunk.color]
                 path = baseAdd+chunk_color_string+"/"
 
                 image_pool = os.listdir(baseAdd + chunk_color_string) #grab a list of all files in that directory
@@ -148,8 +149,10 @@ class GeneralHue(Enum):
 
 class GeneralValue(Enum):
     BLACK = 1
-    GRAY = 2
-    WHITE = 3
+    DARK = 2
+    GRAY = 3
+    BRIGHT = 4
+    WHITE = 5
 
 getColorString = {
     GeneralHue.RED: "red",
@@ -163,9 +166,11 @@ getColorString = {
 }
 
 getValueString = {
-    GeneralValue.BLACK: "dark",
+    GeneralValue.BLACK: "black",
+    GeneralValue.DARK: "dark ",
     GeneralValue.GRAY: "",
-    GeneralValue.WHITE: "bright"
+    GeneralValue.BRIGHT: "bright ",
+    GeneralValue.WHITE: "white"
 }
 
 class ColorRange:
@@ -197,8 +202,8 @@ class ValueRange:
 
 COLOR_RANGES = [
     ColorRange(GeneralHue.CYAN, 0, 0.24),
-    ColorRange(GeneralHue.GREEN, 0.24, 0.52),
-    ColorRange(GeneralHue.YELLOW, 0.52, 0.55),
+    ColorRange(GeneralHue.GREEN, 0.24, 0.50),
+    ColorRange(GeneralHue.YELLOW, 0.50, 0.55),
     ColorRange(GeneralHue.ORANGE, 0.55, 0.62),
     ColorRange(GeneralHue.RED, 0.62, 0.71),
     ColorRange(GeneralHue.PINK, 0.71, 0.81),
@@ -207,9 +212,11 @@ COLOR_RANGES = [
 ]
 
 VALUE_RANGES = [
-    ValueRange(GeneralValue.BLACK, 0, 150),
-    ValueRange(GeneralValue.GRAY, 150, 200),
-    ValueRange(GeneralValue.WHITE, 200, 256),
+    ValueRange(GeneralValue.BLACK, 0, 70),
+    ValueRange(GeneralValue.DARK, 70, 140),
+    ValueRange(GeneralValue.GRAY, 140, 200),
+    ValueRange(GeneralValue.BRIGHT, 200, 240),
+    ValueRange(GeneralValue.WHITE, 240, 256)
 ]
 
 def eval_color(color):
@@ -222,9 +229,11 @@ def eval_color(color):
     
     for range in VALUE_RANGES:
         if range.belongs(color[2]):
+            if getValueString[range.value] == getValueString[GeneralValue.BLACK] or getValueString[range.value] == getValueString[GeneralValue.WHITE]:
+                return range.value
             color_result.append(range.value)
             break
- 
+
     if len(color_result) != 2:
         print("Huh")
         print(color_result)
