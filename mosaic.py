@@ -3,6 +3,7 @@ import colorsys
 import numpy
 from enum import Enum
 import os
+import random
 
 
 class MosaicImage:
@@ -23,6 +24,7 @@ class MosaicImage:
         self.resized_img = cv2.resize(self.ref_img, (self.resize_width, self.resize_height), interpolation=cv2.INTER_LINEAR)
 
         self.chunkify()
+        self.set_sub_images()
 
         if enable_debug:
             self.resized_img = self.debug_draw()
@@ -42,10 +44,11 @@ class MosaicImage:
         for r in range(self.mosaic_height):
             for c in range(self.mosaic_width):
                 try:
-                    sub_img = self.get_image_slice(c, r)
-                    color_RGB = averageColor(sub_img)
-                    color_HSV = colorsys.rgb_to_hsv(color_RGB[0], color_RGB[1], color_RGB[2])
-                    self.chunks[(c,r)] = Chunk((c,r), self.unit_size, color_HSV)
+                    sub_img = self.get_image_slice(c, r) #get the image at this location
+                    color_RGB = averageColor(sub_img) #loop through all pixels and get average RGB
+                    color_HSV = colorsys.rgb_to_hsv(color_RGB[0], color_RGB[1], color_RGB[2]) #turn the RGB into HSV
+                    self.chunks[(c,r)] = Chunk((c,r), self.unit_size, color_HSV) #create a new chunk and pass in HSV
+                    print("created",c,r) #debug
                 except:
                     print("Image size is 0!", r, c)
 
@@ -66,25 +69,34 @@ class MosaicImage:
                     #center of chunk
                     org = (c * self.unit_size, r * self.unit_size + self.unit_size//2)
                     #place text with its color index in that chunk
-                    cv2.putText(img=self.resized_img, text=str(self.chunks[(c,r)].color.value), org=org, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.7, color=(0, 0, 0),thickness=2)
+                    cv2.putText(img=self.resized_img, text=str(self.chunks[(c,r)].color[0].value), org=org, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.7, color=(255, 255, 255),thickness=2)
         return self.resized_img
 
     def set_sub_images(self):
-        baseAdd = "./dataset/candy AND green/" #base address of data
-        dir_list = os.listdir(baseAdd) #grab a list of all files in that directory
-        print(dir_list) #probably remove this
-        dir_index = 0
-        
+        baseAdd = "./dataset/" #base address of data
+
         print("Setting sub images...")
         for r in range(self.mosaic_height):
             for c in range(self.mosaic_width):
-                img = cv2.imread(baseAdd + dir_list[dir_index], cv2.IMREAD_COLOR) #load the image
-                self.set_sub_img((c,r), img)
-                print("\tSet image for",c,r)
+                chunk = self.chunks[(c,r)] #get chunk at this location
+
+                #get the filepath to reference from
+                #chunk.color[0] = color (e.g RED, ORANGE, YELLOW)
+                #chunk.color[1] = value (e.g BLACK, GRAY, WHITE)
+                chunk_color_string = getValueString[chunk.color[1]] + " " + getColorString[chunk.color[0]]
+                path = baseAdd+chunk_color_string+"/"
+
+                image_pool = os.listdir(baseAdd + chunk_color_string) #grab a list of all files in that directory
                 
-                dir_index+=1 #if you don't have enough images (shouldn't happen)
-                if dir_index >= len(dir_list):
-                    dir_index = 0
+                #remove files that we don't care about
+                if "desktop.ini" in image_pool:
+                    image_pool.remove("desktop.ini")
+                
+                random_image = path+random.choice(image_pool) #pick a random image
+                print(random_image) #debug
+                img = cv2.imread(random_image, cv2.IMREAD_ANYCOLOR) #load the image
+                self.set_sub_img((c,r), img)
+                print("Set image for",c,r)
 
     def set_sub_img(self, coor, img):
         self.chunks[coor].set_img(img)
@@ -113,14 +125,14 @@ class Chunk:
         self.hsv = hsv
 
         #what color is this chunk supposed to be?
-        self.color = eval_color(hsv[0])
-        print(self.color)
+        self.color = eval_color(hsv)
+        #print(self.color)
 
     def set_img(self, img):
         self.img = cv2.resize(img, (self.size, self.size), interpolation=cv2.INTER_LINEAR)
 
 
-class GeneralColor(Enum):
+class GeneralHue(Enum):
     RED = 1
     ORANGE = 2
     YELLOW = 3
@@ -133,6 +145,28 @@ class GeneralColor(Enum):
     BLACK = 10
     GRAY = 11
     WHITE = 12
+
+class GeneralValue(Enum):
+    BLACK = 1
+    GRAY = 2
+    WHITE = 3
+
+getColorString = {
+    GeneralHue.RED: "red",
+    GeneralHue.ORANGE: "orange",
+    GeneralHue.YELLOW: "yellow",
+    GeneralHue.GREEN: "green",
+    GeneralHue.CYAN: "cyan",
+    GeneralHue.BLUE: "blue",
+    GeneralHue.PURPLE: "purple",
+    GeneralHue.PINK: "pink",
+}
+
+getValueString = {
+    GeneralValue.BLACK: "dark",
+    GeneralValue.GRAY: "",
+    GeneralValue.WHITE: "bright"
+}
 
 class ColorRange:
     def __init__(self, color, start, end):
@@ -149,22 +183,54 @@ class ColorRange:
     def __str__(self):
         return self.color
 
+class ValueRange:
+    def __init__(self, value, start, end):
+        self.start = start
+        self.end = end
+        self.value = value
+
+    def belongs(self, value):
+        if value >= self.start and value < self.end:
+            return True
+        else:
+            return False
+
 COLOR_RANGES = [
-    ColorRange(GeneralColor.CYAN, 0, 0.24),
-    ColorRange(GeneralColor.GREEN, 0.24, 0.45),
-    ColorRange(GeneralColor.YELLOW, 0.45, 0.52),
-    ColorRange(GeneralColor.ORANGE, 0.52, 0.62),
-    ColorRange(GeneralColor.RED, 0.62, 0.71),
-    ColorRange(GeneralColor.PINK, 0.71, 0.81),
-    ColorRange(GeneralColor.PURPLE, 0.81, 0.91),
-    ColorRange(GeneralColor.BLUE, 0.91, 1.0),
+    ColorRange(GeneralHue.CYAN, 0, 0.24),
+    ColorRange(GeneralHue.GREEN, 0.24, 0.45),
+    ColorRange(GeneralHue.YELLOW, 0.45, 0.52),
+    ColorRange(GeneralHue.ORANGE, 0.52, 0.62),
+    ColorRange(GeneralHue.RED, 0.62, 0.71),
+    ColorRange(GeneralHue.PINK, 0.71, 0.81),
+    ColorRange(GeneralHue.PURPLE, 0.81, 0.91),
+    ColorRange(GeneralHue.BLUE, 0.91, 1.0),
 ]
 
-def eval_color(hue):
+VALUE_RANGES = [
+    ValueRange(GeneralValue.BLACK, 0, 50),
+    ValueRange(GeneralValue.GRAY, 50, 240),
+    ValueRange(GeneralValue.WHITE, 240, 256),
+]
+
+def eval_color(color):
+    color_result = []
+
     for range in COLOR_RANGES:
-        if range.belongs(hue):
-            return range.color
-    print(hue,"didn't fit!")
+        if range.belongs(color[0]):
+            color_result.append(range.color)
+            break
+    
+    for range in VALUE_RANGES:
+        if range.belongs(color[2]):
+            color_result.append(range.value)
+            break
+ 
+    if len(color_result) != 2:
+        print("Huh")
+        print(color_result)
+        print(color)
+
+    return color_result
 
 def show_image(img):
     cv2.imshow("Test", img)
