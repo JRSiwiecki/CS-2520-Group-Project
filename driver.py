@@ -9,6 +9,4 @@ except:
 
 size = int(input("Enter unit size: "))
 mosaic = MosaicImage(ref_img=img, unit_size=size, enable_debug=False)
-print(mosaic)
-#show_image(mosaic.resized_img)
-show_image(mosaic.generate_collage())
+mosaic.show()
