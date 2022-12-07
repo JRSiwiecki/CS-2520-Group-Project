@@ -72,4 +72,5 @@ generateBtn.grid(column = 1, row = 2)
 restartBtn = Button(root, text = "New Mosaic", fg = "black", command = restart)
 restartBtn.grid(column = 1, row = 8)
 
+root.resizable(False, False)
 root.mainloop()
