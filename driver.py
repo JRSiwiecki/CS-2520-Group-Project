@@ -19,12 +19,12 @@ sizeTxt = Entry(root, width = 20)
 sizeTxt.grid(column = 1, row = 1)
 
 oglbl = Label(root)
-oglbl.grid(column = 1, row = 4)
 
 lbl = Label(root)
-lbl.grid(column=1, row = 6, padx= (0, 20))
 
 def check():
+    oglbl.grid(column = 1, row = 4)
+    lbl.grid(column=1, row = 6, padx= (0, 20))
     try:
         og = "Original Image:"
         oglbl.config(text = og)
@@ -37,7 +37,6 @@ def check():
 
         lbl.config(image = photo)
         lbl.image = photo
-        lbl.grid(column=1, row = 6, padx= (0, 20))
     except:
         errorlbl = "No Photo Found"
         oglbl.config(text = errorlbl)
@@ -60,8 +59,8 @@ def clicked():
 def restart():
     imageTxt.delete(0, "end")
     sizeTxt.delete(0, "end")
-    oglbl.config(text = "")
-    lbl.config(image = "")
+    oglbl.grid_forget()
+    lbl.grid_forget()
 
 
 checkBtn = Button(root, text = "check", fg = "black", command = check)
