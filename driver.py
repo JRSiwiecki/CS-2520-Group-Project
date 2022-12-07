@@ -32,7 +32,7 @@ def check():
         width = filename.width
         height = filename.height
 
-        image = filename.resize((width // 6, height // 6), Image.ANTIALIAS)
+        image = filename.resize((width // 6, height // 6), Image.Resampling.LANCZOS)
         photo = ImageTk.PhotoImage(image)
 
         lbl.config(image = photo)
