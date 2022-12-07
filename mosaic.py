@@ -53,7 +53,10 @@ class MosaicImage:
         self.chunks[coor].set_img(img)
 
     def set_sub_images(self):
-        baseAdd = "./testdata/" #base address of data
+        amountImages = self.mosaic_height * self.mosaic_width
+        count=0
+
+        baseAdd = "./dataset/" #base address of data
 
         print("Setting sub images...")
         for r in range(self.mosaic_height):
@@ -69,6 +72,10 @@ class MosaicImage:
                 random_image = path+"/"+random.choice(image_pool) #pick a random image
                 img = cv2.imread(random_image, cv2.IMREAD_ANYCOLOR) #load the image
                 self.set_sub_img((c,r), img) #set the chunk's sub image
+                
+                count+=1 #increase count
+                #print out the progress, with flush on (overwrites previous line/overwrites)
+                print("Progress: " + str(round(count/amountImages*100,2)) + "%", end="\r", flush=True)                
 
     def debug_draw(self):
         #draw a line for each row
@@ -121,7 +128,14 @@ class Chunk:
         self.img = cv2.resize(img, (self.size, self.size), interpolation=cv2.INTER_LINEAR)
 
 def show_image(img):
-    cv2.imshow("Image", img)
+    h2 = 600
+    #h/w = h2/w2
+    #w2 * h = h2 * w
+    #w2 = h2 * w / h
+    w2 = h2 * img.shape[1] // img.shape[0]
+    img = cv2.resize(img, (w2, h2), interpolation=cv2.INTER_LINEAR)
+
+    cv2.imshow("Result", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
