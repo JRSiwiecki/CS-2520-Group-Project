@@ -1,57 +1,76 @@
 from mosaic import *
-import os
+from tkinter import *
+from PIL import ImageTk, Image
 
-# Before Running:
+root = Tk()
 
-# Check if the dataset is populated with folders of images of colors.
-# If it is not, then run data_grabber.py and allow for the folder to populate.
+root.title("Mosaic Generator")
 
-# How To Run:
-# 
-# 1. Place any .png images you'd like to generate a mosaic of inside the testimages folder (some samples provided)
-# 2. Run driver.py
-# 3. Enter the name of the image you'd like to create a mosaic for (do not enter the file extension).
-# 4. Enter the size of each unit you'd like for the picture (smaller = more detail = longer runtime).
-# 	    Good example unit size = 20
-# 5. Wait for the mosaic to generate! 
-# 6. When the mosaic is created, a window called "Result" will appear.
-# 7. Click on the "Result" window and view the mosaic! Close the window when done viewing.
-# 8. Enter y to generate another mosaic following steps 3-7 or press n to quit!
+imglbl = Label(root, text = "Enter Image name: ")
+imglbl.grid(padx= (10, 5))
 
-#try as long as user wants to continue
-while True:
-    #try as long as user enters in a non image
-    while True:
-        try:
-            image = input("Enter image name: ")
-            if image + ".png" not in os.listdir("testimages"):
-                raise OSError
-            else:
-                break
-        except OSError:
-            print("Can't find that file") 
+sizelbl = Label(root, text = "Enter unit size: ")
+sizelbl.grid(padx= (10, 10))
 
-    img = cv2.imread("testimages/" + image + ".png", cv2.IMREAD_COLOR)
+imageTxt = Entry(root, width = 20)
+imageTxt.grid(column = 1, row = 0)
 
-    #try as long as user enters in a noninteger
-    while True:
-        try:
-            size = int(input("Enter unit size: "))
-            if size <= 0:
-                raise ValueError
-            else:
-                break
-        except ValueError:
-            print("Please enter only an integer.")
+sizeTxt = Entry(root, width = 20)
+sizeTxt.grid(column = 1, row = 1)
 
-    #create the mosaic image
+oglbl = Label(root)
+oglbl.grid(column = 1, row = 4)
+
+lbl = Label(root)
+lbl.grid(column=1, row = 6, padx= (0, 20))
+
+def check():
+    try:
+        og = "Original Image:"
+        oglbl.config(text = og)
+        filename = Image.open("testimages/" + imageTxt.get() + ".png")
+        width = filename.width
+        height = filename.height
+
+        image = filename.resize((width // 6, height // 6), Image.ANTIALIAS)
+        photo = ImageTk.PhotoImage(image)
+
+        lbl.config(image = photo)
+        lbl.image = photo
+        lbl.grid(column=1, row = 6, padx= (0, 20))
+    except:
+        errorlbl = "No Photo Found"
+        oglbl.config(text = errorlbl)
+        lbl.grid_forget()
+    
+
+def clicked():
+    try:
+        image = imageTxt.get()
+        img = cv2.imread("testimages/" + image + ".png", cv2.IMREAD_COLOR)
+
+    except:
+        print("Can't find that file")
+        exit() 
+
+    size = int(sizeTxt.get())
     mosaic = MosaicImage(ref_img=img, unit_size=size, enable_debug=False)
     mosaic.show()
 
-    #ask as long as they enter in not n or y
-    while True:
-        answer = input("Would you like to go again? Y/N").lower()
-        if answer == "n":
-            exit()
-        if answer == "y":
-            break
+def restart():
+    imageTxt.delete(0, "end")
+    sizeTxt.delete(0, "end")
+    oglbl.config(text = "")
+    lbl.config(image = "")
+
+
+checkBtn = Button(root, text = "check", fg = "black", command = check)
+checkBtn.grid(column = 2, row = 0, padx= (5, 10))
+
+generateBtn = Button(root, text = "Generate", fg = "black", command = clicked)
+generateBtn.grid(column = 1, row = 2)
+
+restartBtn = Button(root, text = "New Mosaic", fg = "black", command = restart)
+restartBtn.grid(column = 1, row = 8)
+
+root.mainloop()
